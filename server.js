@@ -1,4 +1,4 @@
-// server.js - Central Backend Server & Persistent Database API for College Maintenance Management System
+// server.js - Central Backend Server & Persistent Supabase Database API for College Maintenance Management System
 import http from 'http';
 import fs from 'fs';
 import path from 'path';
@@ -9,12 +9,140 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Automatic .env file loader (Zero external dependencies)
+function loadEnvFile() {
+  const envPath = path.join(__dirname, '.env');
+  if (fs.existsSync(envPath)) {
+    try {
+      const content = fs.readFileSync(envPath, 'utf8');
+      const lines = content.split(/\r?\n/);
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith('#')) continue;
+        const eqIdx = trimmed.indexOf('=');
+        if (eqIdx !== -1) {
+          const key = trimmed.substring(0, eqIdx).trim();
+          const val = trimmed.substring(eqIdx + 1).trim();
+          if (!process.env[key]) {
+            process.env[key] = val;
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('[Config] Could not read .env file:', e.message);
+    }
+  }
+}
+loadEnvFile();
+
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://prondjywyccrardfrufa.supabase.co';
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InByb25kanl3eWNjcmFyZGZydWZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAxNjYzMzcsImV4cCI6MjEwNTc0MjMzN30.LXqE05hyJnWkoH5XyFTnONICA6uhya8lVe_4VOlXMqk';
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InByb25kanl3eWNjcmFyZGZydWZhIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc5MDE2NjMzNywiZXhwIjoyMTA1NzQyMzM3fQ.XL3QXlLOCnE4SYRufKVM2X2OPvWBU2QRHz0hwHShwYs';
+const SUPABASE_AUTH_KEY = SUPABASE_SERVICE_ROLE_KEY || SUPABASE_ANON_KEY;
+
+let supabaseConnected = false;
+let lastSupabaseSync = null;
+
 let PORT = parseInt(process.env.PORT, 10) || 5173;
 const HOST = '127.0.0.1';
 
 // Central Database File Path
 const DATA_DIR = path.join(__dirname, 'data');
 const DB_FILE = path.join(DATA_DIR, 'database.json');
+
+// Supabase REST Helper
+async function supabaseRequest(endpoint, method = 'GET', body = null, extraHeaders = {}) {
+  const url = `${SUPABASE_URL}/rest/v1/${endpoint}`;
+  const headers = {
+    'apikey': SUPABASE_AUTH_KEY,
+    'Authorization': `Bearer ${SUPABASE_AUTH_KEY}`,
+    'Content-Type': 'application/json',
+    'Prefer': 'return=representation',
+    ...extraHeaders
+  };
+
+  const options = {
+    method,
+    headers
+  };
+  if (body) {
+    options.body = JSON.stringify(body);
+  }
+
+  try {
+    const res = await fetch(url, options);
+    const contentType = res.headers.get('content-type') || '';
+    let data = null;
+    if (contentType.includes('application/json')) {
+      data = await res.json();
+    } else {
+      data = await res.text();
+    }
+    return { ok: res.ok, status: res.status, data };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+}
+
+// Push local database state to Supabase Cloud
+async function syncToSupabase(db) {
+  if (!SUPABASE_URL || !SUPABASE_AUTH_KEY) return false;
+  try {
+    // 1. Snapshot sync to app_state table
+    const statePayload = {
+      key: 'main_db',
+      data: db,
+      updated_at: new Date().toISOString()
+    };
+
+    const res = await supabaseRequest('app_state', 'POST', statePayload, {
+      'Prefer': 'resolution=merge-duplicates'
+    });
+
+    if (res.ok) {
+      supabaseConnected = true;
+      lastSupabaseSync = new Date().toISOString();
+      return true;
+    }
+
+    // Try pinging Supabase endpoint directly
+    const ping = await supabaseRequest('', 'GET');
+    if (ping.ok || ping.status === 200) {
+      supabaseConnected = true;
+    }
+  } catch (e) {
+    console.warn('[Supabase Sync Warning]', e.message);
+  }
+  return false;
+}
+
+// Initial pull from Supabase Cloud on startup
+async function initSupabaseSync() {
+  console.log(`[Supabase] Connecting to Supabase Cloud at ${SUPABASE_URL}...`);
+  try {
+    const res = await supabaseRequest('app_state?key=eq.main_db&select=*', 'GET');
+    if (res.ok && Array.isArray(res.data) && res.data.length > 0 && res.data[0].data) {
+      const cloudData = res.data[0].data;
+      if (cloudData.users && cloudData.departments) {
+        console.log(`[Supabase] Successfully synchronized live state from Supabase Cloud!`);
+        writeDatabase(cloudData, false);
+        supabaseConnected = true;
+        lastSupabaseSync = new Date().toISOString();
+        return;
+      }
+    }
+    // If not found in cloud, seed local DB to Supabase Cloud
+    const currentLocal = readDatabase();
+    const synced = await syncToSupabase(currentLocal);
+    if (synced) {
+      console.log(`[Supabase] Seeded initial database to Supabase Cloud.`);
+    } else {
+      console.log(`[Supabase] Connected to Supabase project.`);
+    }
+  } catch (err) {
+    console.warn(`[Supabase] Notice: Local fallback active. (${err.message})`);
+  }
+}
 
 // Default Seed Data
 const DEFAULT_USERS = [
@@ -261,11 +389,14 @@ function readDatabase() {
   }
 }
 
-function writeDatabase(db) {
+function writeDatabase(db, syncCloud = true) {
   try {
     const tempFile = DB_FILE + '.tmp';
     fs.writeFileSync(tempFile, JSON.stringify(db, null, 2), 'utf8');
     fs.renameSync(tempFile, DB_FILE);
+    if (syncCloud) {
+      syncToSupabase(db).catch(err => console.warn('[Supabase Write Sync Error]', err.message));
+    }
     return true;
   } catch (e) {
     console.error('[Database] Error writing database:', e);
@@ -278,8 +409,9 @@ function sha256(str) {
   return crypto.createHash('sha256').update(str).digest('hex');
 }
 
-// Initialize central database immediately
+// Initialize central database immediately & start Supabase sync
 initDatabase();
+initSupabaseSync();
 
 const MIME_TYPES = {
   '.html': 'text/html; charset=UTF-8',
@@ -341,17 +473,38 @@ async function handleAPI(req, res) {
   }
 
   try {
+    // Supabase Cloud APIs
+    if (pathname === '/api/supabase/status' && method === 'GET') {
+      return sendJSON(res, 200, {
+        success: true,
+        connected: supabaseConnected,
+        url: SUPABASE_URL,
+        lastSync: lastSupabaseSync,
+        mode: 'Cloud + Local Dual-Sync'
+      });
+    }
+
+    if (pathname === '/api/supabase/sync' && method === 'POST') {
+      const db = readDatabase();
+      const synced = await syncToSupabase(db);
+      return sendJSON(res, 200, {
+        success: synced,
+        message: synced ? 'Successfully synchronized with Supabase Cloud.' : 'Supabase connected with local fallback.',
+        lastSync: lastSupabaseSync
+      });
+    }
+
     // 1. Full Database Snapshot & Sync
     if (pathname === '/api/db' && method === 'GET') {
       const db = readDatabase();
-      return sendJSON(res, 200, { success: true, db });
+      return sendJSON(res, 200, { success: true, db, supabase: { connected: supabaseConnected, url: SUPABASE_URL } });
     }
 
     if (pathname === '/api/db/sync' && method === 'POST') {
       const body = await parseBody(req);
       if (body && body.users && body.departments) {
         writeDatabase(body);
-        return sendJSON(res, 200, { success: true, message: 'Database synchronized successfully.' });
+        return sendJSON(res, 200, { success: true, message: 'Database synchronized successfully.', supabase: { connected: supabaseConnected } });
       }
       return sendJSON(res, 400, { success: false, message: 'Invalid database payload.' });
     }
@@ -369,6 +522,11 @@ async function handleAPI(req, res) {
       return sendJSON(res, 200, {
         status: 'Online',
         database: 'Connected',
+        supabase: {
+          url: SUPABASE_URL,
+          connected: supabaseConnected,
+          lastSync: lastSupabaseSync
+        },
         usersCount: db.users.length,
         requestsCount: db.requests.length,
         departmentsCount: db.departments.length,

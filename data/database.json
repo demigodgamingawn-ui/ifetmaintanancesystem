@@ -1,5 +1,4 @@
 {
-  "version": "1.0",
   "users": [
     {
       "id": "usr-admin-1",
@@ -15,7 +14,7 @@
       "status": "Active",
       "must_change_password": false,
       "password_changed_at": "2026-09-23T14:30:00.000Z",
-      "last_login": null,
+      "last_login": "2026-09-23T14:26:19.693Z",
       "created_at": "2026-09-23T14:30:00.000Z",
       "updated_at": "2026-09-23T14:30:00.000Z"
     },
@@ -162,6 +161,24 @@
       "last_login": null,
       "created_at": "2026-09-23T14:30:00.000Z",
       "updated_at": "2026-09-23T14:30:00.000Z"
+    },
+    {
+      "id": "usr-1790173261528",
+      "full_name": "Rajesh",
+      "employee_id": "EMP-ECE-26",
+      "user_id": "rajesh",
+      "email": "rajesh@ifet.ac.in",
+      "phone": "9789274320",
+      "role": "Lab Assistant",
+      "department": "Electronics & Communication Engineering",
+      "lab": "Main",
+      "status": "Active",
+      "password_hash": "e263f2822b34422369bc9f5006761e07eac4272b323019c22c3f3efbb8ea50cd",
+      "must_change_password": false,
+      "password_changed_at": "2026-09-23T14:21:53.072Z",
+      "last_login": "2026-09-23T14:22:22.387Z",
+      "created_at": "2026-09-23T14:21:01.528Z",
+      "updated_at": "2026-09-23T14:21:53.072Z"
     }
   ],
   "departments": [
@@ -243,5 +260,102 @@
   "assignments": [],
   "work_updates": [],
   "notifications": [],
-  "audit_logs": []
+  "audit_logs": [
+    {
+      "id": "aud-1790173634260",
+      "user_id": "usr-admin-1",
+      "user_name": "Dr. K. Rajasekar",
+      "role": "Admin",
+      "request_id": "-",
+      "action": "USER_LOGOUT",
+      "old_status": "-",
+      "new_status": "-",
+      "details": "User admin001 logged out.",
+      "timestamp": "2026-09-23T14:27:14.260Z"
+    },
+    {
+      "id": "aud-1790173342399",
+      "user_id": "usr-1790173261528",
+      "user_name": "Rajesh",
+      "role": "Lab Assistant",
+      "request_id": "-",
+      "action": "USER_LOGIN",
+      "old_status": "-",
+      "new_status": "-",
+      "details": "User rajesh (Lab Assistant) logged in successfully.",
+      "timestamp": "2026-09-23T14:22:22.399Z"
+    },
+    {
+      "id": "aud-1790173327808",
+      "user_id": "usr-admin-1",
+      "user_name": "Dr. K. Rajasekar",
+      "role": "Admin",
+      "request_id": "-",
+      "action": "USER_LOGOUT",
+      "old_status": "-",
+      "new_status": "-",
+      "details": "User admin001 logged out.",
+      "timestamp": "2026-09-23T14:22:07.808Z"
+    },
+    {
+      "id": "aud-1790173319261",
+      "user_id": "usr-1790173261528",
+      "user_name": "Rajesh",
+      "role": "Lab Assistant",
+      "request_id": "-",
+      "action": "USER_LOGOUT",
+      "old_status": "-",
+      "new_status": "-",
+      "details": "User rajesh logged out.",
+      "timestamp": "2026-09-23T14:21:59.261Z"
+    },
+    {
+      "id": "aud-1790173313079",
+      "user_id": "usr-1790173261528",
+      "user_name": "Rajesh",
+      "role": "Lab Assistant",
+      "request_id": "-",
+      "action": "USER_PASSWORD_CHANGE",
+      "old_status": "-",
+      "new_status": "-",
+      "details": "User rajesh (Lab Assistant) successfully set permanent password on initial login.",
+      "timestamp": "2026-09-23T14:21:53.079Z"
+    },
+    {
+      "id": "aud-1790173282781",
+      "user_id": "usr-admin-1",
+      "user_name": "Dr. K. Rajasekar",
+      "role": "Admin",
+      "request_id": "-",
+      "action": "USER_LOGOUT",
+      "old_status": "-",
+      "new_status": "-",
+      "details": "User admin001 logged out.",
+      "timestamp": "2026-09-23T14:21:22.781Z"
+    },
+    {
+      "id": "aud-1790173261539",
+      "user_id": "usr-1790173261528",
+      "user_name": "Rajesh",
+      "role": "Lab Assistant",
+      "request_id": "-",
+      "action": "ADMIN_CREATE_USER",
+      "old_status": "-",
+      "new_status": "-",
+      "details": "Admin created user account rajesh (Lab Assistant) with temporary password.",
+      "timestamp": "2026-09-23T14:21:01.539Z"
+    },
+    {
+      "id": "aud-1790173179531",
+      "user_id": "usr-admin-1",
+      "user_name": "Dr. K. Rajasekar",
+      "role": "Admin",
+      "request_id": "-",
+      "action": "USER_LOGIN",
+      "old_status": "-",
+      "new_status": "-",
+      "details": "User admin001 (Admin) logged in successfully.",
+      "timestamp": "2026-09-23T14:19:39.531Z"
+    }
+  ]
 }

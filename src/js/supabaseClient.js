@@ -1,8 +1,11 @@
 // src/js/supabaseClient.js - Supabase Client & REST Connector for IFET Maintenance System
 
+const envUrl = typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_SUPABASE_URL;
+const envAnonKey = typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_SUPABASE_ANON_KEY;
+
 export const SUPABASE_CONFIG = {
-  url: 'https://prondjywyccrardfrufa.supabase.co',
-  anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InByb25kanl3eWNjcmFyZGZydWZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAxNjYzMzcsImV4cCI6MjEwNTc0MjMzN30.LXqE05hyJnWkoH5XyFTnONICA6uhya8lVe_4VOlXMqk',
+  url: envUrl || 'https://prondjywyccrardfrufa.supabase.co',
+  anonKey: envAnonKey || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InByb25kanl3eWNjcmFyZGZydWZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAxNjYzMzcsImV4cCI6MjEwNTc0MjMzN30.LXqE05hyJnWkoH5XyFTnONICA6uhya8lVe_4VOlXMqk',
 };
 
 // Initialize Supabase JS client if library is available on window
